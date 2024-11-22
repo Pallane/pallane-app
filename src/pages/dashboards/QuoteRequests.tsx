@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Eye, Download, CheckCircle, XCircle, Clock, X } from 'lucide-react';
+import { Eye, Download, CheckCircle, XCircle, Clock, X, FileText, Loader2 } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { generateQuotePDF } from '../../utils/pdfGenerator';
 
 interface QuoteRequest {
   id: string;
@@ -10,25 +13,33 @@ interface QuoteRequest {
   email: string;
   company_name: string;
   phone: string;
-  message: string;
+  message?: string;
   status: 'pending' | 'processing' | 'completed' | 'rejected';
   products: Array<{
     id: string;
     name: string;
     quantity: number;
     type: string;
+    price: string;
   }>;
 }
 
 export default function QuoteRequests() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [requests, setRequests] = useState<QuoteRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<QuoteRequest | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     fetchQuoteRequests();
-  }, []);
+  }, [user, navigate]);
 
   const fetchQuoteRequests = async () => {
     try {
@@ -47,46 +58,35 @@ export default function QuoteRequests() {
     }
   };
 
-  const handleViewDetails = (request: QuoteRequest) => {
-    setSelectedRequest(request);
+  const handleStatusUpdate = async (requestId: string, newStatus: 'pending' | 'processing' | 'completed' | 'rejected') => {
+    try {
+      setUpdatingStatus(requestId);
+      const { error } = await supabase
+        .from('quote_requests')
+        .update({ status: newStatus })
+        .eq('id', requestId);
+
+      if (error) throw error;
+      
+      setRequests(prev => prev.map(req => 
+        req.id === requestId ? { ...req, status: newStatus } : req
+      ));
+    } catch (err: any) {
+      console.error('Error updating status:', err);
+      setError(err.message);
+    } finally {
+      setUpdatingStatus(null);
+    }
   };
 
   const handleDownload = (request: QuoteRequest) => {
-    // Créer le contenu du PDF
-    const content = `
-DEMANDE DE DEVIS
-
-Date: ${new Date(request.created_at).toLocaleDateString()}
-Référence: ${request.id}
-
-INFORMATIONS CLIENT
-------------------
-Nom: ${request.first_name} ${request.last_name}
-Entreprise: ${request.company_name}
-Email: ${request.email}
-Téléphone: ${request.phone}
-
-PRODUITS DEMANDÉS
-----------------
-${request.products.map(p => `- ${p.name} (${p.type}) x${p.quantity}`).join('\n')}
-
-MESSAGE
--------
-${request.message}
-
-Statut: ${request.status}
-    `;
-
-    // Créer et télécharger le fichier
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `devis-${request.id}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    try {
+      const doc = generateQuotePDF(request);
+      doc.save(`devis-${request.id.slice(0, 8)}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      setError('Erreur lors de la génération du PDF');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -127,7 +127,7 @@ Statut: ${request.status}
   if (loading) {
     return (
       <div className="min-h-screen bg-[#EDEDED] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -135,7 +135,9 @@ Statut: ${request.status}
   if (error) {
     return (
       <div className="min-h-screen bg-[#EDEDED] flex items-center justify-center">
-        <div className="text-red-500">{error}</div>
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
+          {error}
+        </div>
       </div>
     );
   }
@@ -191,12 +193,17 @@ Statut: ${request.status}
                       {request.products.length} produit(s)
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(request.status)}
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(request.status)}
+                        {updatingStatus === request.id && (
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-3">
                         <button 
-                          onClick={() => handleViewDetails(request)}
+                          onClick={() => setSelectedRequest(request)}
                           className="text-primary hover:text-primary/80"
                         >
                           <Eye className="w-5 h-5" />
@@ -205,7 +212,7 @@ Statut: ${request.status}
                           onClick={() => handleDownload(request)}
                           className="text-primary hover:text-primary/80"
                         >
-                          <Download className="w-5 h-5" />
+                          <FileText className="w-5 h-5" />
                         </button>
                       </div>
                     </td>
@@ -266,9 +273,12 @@ Statut: ${request.status}
                           <p className="font-medium text-gray-900">{product.name}</p>
                           <p className="text-sm text-gray-500">Type: {product.type}</p>
                         </div>
-                        <span className="bg-primary/10 text-primary px-2 py-1 rounded text-sm">
-                          Quantité: {product.quantity}
-                        </span>
+                        <div className="text-right">
+                          <span className="bg-primary/10 text-primary px-2 py-1 rounded text-sm">
+                            Quantité: {product.quantity}
+                          </span>
+                          <p className="text-sm text-gray-600 mt-1">{product.price}</p>
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -276,21 +286,40 @@ Statut: ${request.status}
               </div>
 
               {/* Message */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Message</h3>
-                <p className="text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg p-4">
-                  {selectedRequest.message}
-                </p>
-              </div>
+              {selectedRequest.message && (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Message</h3>
+                  <p className="text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg p-4">
+                    {selectedRequest.message}
+                  </p>
+                </div>
+              )}
 
-              {/* Statut */}
+              {/* Actions */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Statut</h3>
-                <div className="flex items-center space-x-3">
-                  {getStatusBadge(selectedRequest.status)}
-                  <span className="text-sm text-gray-500">
-                    Demande créée le {new Date(selectedRequest.created_at).toLocaleDateString()}
-                  </span>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Actions</h3>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => handleStatusUpdate(selectedRequest.id, 'processing')}
+                    disabled={updatingStatus === selectedRequest.id}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                  >
+                    Marquer en cours
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate(selectedRequest.id, 'completed')}
+                    disabled={updatingStatus === selectedRequest.id}
+                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:opacity-50"
+                  >
+                    Marquer comme terminé
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate(selectedRequest.id, 'rejected')}
+                    disabled={updatingStatus === selectedRequest.id}
+                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50"
+                  >
+                    Rejeter
+                  </button>
                 </div>
               </div>
             </div>
@@ -300,7 +329,7 @@ Statut: ${request.status}
                 onClick={() => handleDownload(selectedRequest)}
                 className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors flex items-center space-x-2"
               >
-                <Download className="w-4 h-4" />
+                <FileText className="w-4 h-4" />
                 <span>Télécharger</span>
               </button>
             </div>

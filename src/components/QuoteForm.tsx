@@ -1,21 +1,37 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { createQuoteRequest } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
+import { Loader2 } from 'lucide-react';
+import { z } from 'zod';
+
+const quoteFormSchema = z.object({
+  firstName: z.string().min(2, 'Le prénom est requis'),
+  lastName: z.string().min(2, 'Le nom est requis'),
+  email: z.string().email('Email invalide'),
+  companyName: z.string().min(2, 'Le nom de l\'entreprise est requis'),
+  phone: z.string().min(10, 'Numéro de téléphone invalide'),
+  message: z.string().optional()
+});
+
+type QuoteFormData = z.infer<typeof quoteFormSchema>;
 
 export default function QuoteForm() {
-  const { items: cartItems, clearCart } = useCartStore();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [formData, setFormData] = useState({
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [formData, setFormData] = useState<QuoteFormData>({
     firstName: '',
     lastName: '',
-    email: '',
+    email: user?.email || '',
     companyName: '',
     phone: '',
     message: ''
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { items: cartItems, clearCart } = useCartStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,60 +39,60 @@ export default function QuoteForm() {
     setError(null);
 
     try {
+      // Vérifier si l'utilisateur est connecté
+      if (!user) {
+        navigate('/login', { state: { from: '/cart' } });
+        return;
+      }
+
       if (cartItems.length === 0) {
         throw new Error('Votre panier est vide');
       }
 
-      // Préparer les données des produits
+      // Valider les données du formulaire
+      const validatedData = quoteFormSchema.parse(formData);
+
+      // Préparer les données des produits du panier
       const products = cartItems.map(item => ({
         id: item.id,
         name: item.name,
         quantity: item.quantity,
-        type: item.type
+        type: item.type,
+        price: item.price
       }));
 
-      // Envoyer la demande à Supabase
+      // Créer la demande de devis dans Supabase
       await createQuoteRequest({
-        ...formData,
+        ...validatedData,
         products
       });
 
-      setSuccess(true);
+      // Vider le panier après succès
       clearCart();
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        companyName: '',
-        phone: '',
-        message: ''
-      });
+      
+      // Rediriger vers une page de confirmation
+      navigate('/quote-confirmation');
     } catch (err: any) {
       console.error('Error creating quote request:', err);
-      setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
+      if (err instanceof z.ZodError) {
+        setError(err.errors[0].message);
+      } else {
+        setError(err.message || 'Une erreur est survenue lors de l\'envoi du formulaire');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (success) {
-    return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800">
-        <p className="font-medium">Demande de devis envoyée avec succès !</p>
-        <p className="text-sm mt-2">Nous vous contacterons dans les plus brefs délais.</p>
-      </div>
-    );
-  }
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
             Prénom
@@ -158,7 +174,6 @@ export default function QuoteForm() {
           onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
           rows={4}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-          required
         />
       </div>
 
@@ -177,9 +192,16 @@ export default function QuoteForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full bg-primary text-white px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
-        {isSubmitting ? 'Envoi en cours...' : 'Envoyer la demande de devis'}
+        {isSubmitting ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Envoi en cours...
+          </>
+        ) : (
+          'Envoyer la demande de devis'
+        )}
       </button>
     </form>
   );
