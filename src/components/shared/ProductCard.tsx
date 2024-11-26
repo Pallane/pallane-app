@@ -35,8 +35,18 @@ export default function ProductCard({
     });
   };
 
+  // Construire le lien en fonction du type de produit
+  const getProductLink = () => {
+    switch (tag.toLowerCase()) {
+      case 'training':
+        return `/course/${id}`;
+      default:
+        return `/product/${tag.toLowerCase()}-${id}`;
+    }
+  };
+
   return (
-    <Link to={`/product/${id}`} className="block w-full">
+    <Link to={getProductLink()} className="block w-full">
       <div className="w-full bg-white rounded-xl shadow-md">
         <div className="p-6">
           <div className="flex justify-between items-start mb-6">
