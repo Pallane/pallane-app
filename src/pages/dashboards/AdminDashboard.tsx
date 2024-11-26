@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import { 
   Users, 
   DollarSign, 
@@ -10,12 +11,34 @@ import {
   UserPlus,
   Package,
   MessageSquare,
-  BarChart2
+  BarChart2,
+  Crown
 } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+
   return (
     <div>
+      {/* Statut Admin */}
+      <div className="mb-8 bg-gradient-to-r from-primary to-secondary rounded-xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+              <Crown className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Administrateur</h2>
+              <p className="text-white/80">Connecté en tant qu'administrateur système</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+            <span className="text-sm">Accès administrateur actif</span>
+          </div>
+        </div>
+      </div>
+
       {/* Alertes système */}
       <div className="mb-8">
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between">
@@ -60,7 +83,7 @@ export default function AdminDashboard() {
 
         <div className="bg-white rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-gray-600">Partenaires</span>
+            <span className="text-gray-600">Formateurs</span>
             <ShieldCheck className="w-5 h-5 text-primary" />
           </div>
           <p className="text-2xl font-bold text-gray-900">126</p>
@@ -112,7 +135,7 @@ export default function AdminDashboard() {
                   <UserPlus className="w-4 h-4 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-900">Nouveau partenaire inscrit</p>
+                  <p className="text-sm text-gray-900">Nouveau formateur inscrit</p>
                   <p className="text-xs text-gray-600">Il y a 5 minutes</p>
                 </div>
               </div>
@@ -122,7 +145,7 @@ export default function AdminDashboard() {
                   <Package className="w-4 h-4 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-900">Nouvelle solution publiée</p>
+                  <p className="text-sm text-gray-900">Nouvelle formation publiée</p>
                   <p className="text-xs text-gray-600">Il y a 12 minutes</p>
                 </div>
               </div>

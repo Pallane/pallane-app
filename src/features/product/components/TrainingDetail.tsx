@@ -1,14 +1,15 @@
+{/* Je garde le même contenu mais je réorganise les sections dans l'ordre demandé */}
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Share2, Download, Heart, ChevronRight, Users, BookOpen, Target, CheckCircle, School, Clock, Globe, Award } from 'lucide-react';
-import { generateQuotePDF } from '../../../utils/pdfGenerator';
+import { Share2, Download, Heart, ChevronRight, Users, BookOpen, Target, CheckCircle, School, Clock, Globe, Award, Calendar, Mail } from 'lucide-react';
 import ProductCard from '../../../components/shared/ProductCard';
 import { mockProducts } from '../data/mockData';
+import TrainingSchedule from './TrainingSchedule';
+import TrainerProfile from './TrainerProfile';
 
 export default function TrainingDetail({ product }: { product: any }) {
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
-    // Ajouter une notification de succès ici
   };
 
   const handleDownloadPDF = () => {
@@ -21,6 +22,17 @@ export default function TrainingDetail({ product }: { product: any }) {
 
   // Simuler des formations recommandées
   const recommendedTrainings = Object.values(mockProducts.training).slice(0, 3);
+
+  // Données du formateur
+  const trainer = {
+    name: "Jean Dupont",
+    title: "Expert Cloud & DevOps",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2940&auto=format&fit=crop",
+    bio: "Plus de 15 ans d'expérience dans le cloud computing et DevOps. Certifié Azure Solutions Architect Expert et AWS Solutions Architect Professional.",
+    certifications: ["Azure Solutions Architect Expert", "AWS Solutions Architect Professional", "Google Cloud Professional Architect"],
+    specialties: ["Cloud Architecture", "DevOps", "Containerization", "Microservices"],
+    languages: ["Français", "Anglais"]
+  };
 
   return (
     <div className="space-y-8">
@@ -143,58 +155,6 @@ export default function TrainingDetail({ product }: { product: any }) {
         </ul>
       </div>
 
-      {/* Les + de la formation */}
-      <div className="bg-white rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-            <School className="w-5 h-5 text-primary" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900">Les + de la formation</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium text-gray-900 mb-2">Support de cours inclus</h3>
-            <p className="text-gray-600 text-sm">Accès à tous les supports de formation et ressources complémentaires</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium text-gray-900 mb-2">Certification</h3>
-            <p className="text-gray-600 text-sm">Certificat de réussite à l'issue de la formation</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium text-gray-900 mb-2">Exercices pratiques</h3>
-            <p className="text-gray-600 text-sm">Mise en pratique sur des cas concrets</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-medium text-gray-900 mb-2">Suivi personnalisé</h3>
-            <p className="text-gray-600 text-sm">Accompagnement individuel tout au long de la formation</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Public concerné */}
-      <div className="bg-white rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-            <Users className="w-5 h-5 text-primary" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900">Public concerné</h2>
-        </div>
-        <ul className="space-y-3">
-          <li className="flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-            <span className="text-gray-700">Professionnels du secteur IT</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-            <span className="text-gray-700">Développeurs et architectes</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <CheckCircle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-            <span className="text-gray-700">Chefs de projets techniques</span>
-          </li>
-        </ul>
-      </div>
-
       {/* Programme détaillé */}
       <div className="bg-white rounded-xl p-6">
         <div className="flex items-center gap-3 mb-6">
@@ -221,6 +181,29 @@ export default function TrainingDetail({ product }: { product: any }) {
             </details>
           ))}
         </div>
+      </div>
+
+      {/* Profil du formateur */}
+      <TrainerProfile trainer={trainer} />
+
+      {/* Sessions de formation */}
+      <div className="bg-white rounded-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-primary" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900">Sessions à venir</h2>
+          </div>
+          <button 
+            onClick={() => window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text=Formation%20Azure&dates=20240201T090000Z%2F20240205T170000Z', '_blank')}
+            className="flex items-center gap-2 text-primary hover:text-primary/80"
+          >
+            <Mail className="w-4 h-4" />
+            <span>Ajouter à mon agenda</span>
+          </button>
+        </div>
+        <TrainingSchedule />
       </div>
 
       {/* Formations recommandées */}

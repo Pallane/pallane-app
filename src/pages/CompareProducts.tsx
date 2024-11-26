@@ -1,39 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, X, Check, Search, ArrowDown, ArrowLeft } from 'lucide-react';
+import { Plus, X, Check, Search, ArrowLeft } from 'lucide-react';
 import { mockProducts } from '../features/product/data/mockData';
 import { useCartStore } from '../store/cartStore';
 import Footer from '../components/Footer';
 
-interface SelectedTag {
-  id: string;
-  type: string;
-}
-
-type ProductType = 'hardware' | 'license' | 'training' | 'expert';
-
 export default function CompareProducts() {
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [showProductList, setShowProductList] = useState(false);
-  const [selectedType, setSelectedType] = useState<ProductType>('hardware');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [selectedTags, setSelectedTags] = useState<SelectedTag[]>([]);
   const addToCart = useCartStore((state) => state.addItem);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  // Récupérer uniquement les formations
+  const trainings = Object.values(mockProducts.training);
 
-  const productsByType = {
-    hardware: Object.values(mockProducts.hardware),
-    license: Object.values(mockProducts.license),
-    training: Object.values(mockProducts.training),
-    expert: Object.values(mockProducts.expert),
-  };
-
-  const filteredProducts = productsByType[selectedType].filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filtrer les formations selon la recherche
+  const filteredProducts = trainings.filter(product =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAddProduct = (product: any) => {
@@ -58,73 +42,49 @@ export default function CompareProducts() {
     });
   };
 
-  const getFeaturesByType = (type: ProductType) => {
-    const commonFeatures = [
-      { id: 'type', name: 'Type', type: 'text' },
-      { id: 'description', name: 'Description', type: 'text' },
-      { id: 'support', name: 'Support 24/7', type: 'boolean' },
+  const getFeaturesToCompare = () => {
+    return [
+      { id: 'duration', name: 'Durée', type: 'text' },
+      { id: 'level', name: 'Niveau', type: 'text' },
+      { id: 'language', name: 'Langue', type: 'text' },
+      { id: 'certificate', name: 'Certification incluse', type: 'boolean' },
+      { id: 'prerequisites', name: 'Prérequis', type: 'text' },
+      { id: 'objectives', name: 'Objectifs', type: 'text' },
+      { id: 'practicalWork', name: 'Travaux pratiques', type: 'boolean' },
+      { id: 'support', name: 'Support de cours', type: 'boolean' },
+      { id: 'mentoring', name: 'Mentorat', type: 'boolean' },
+      { id: 'interCompany', name: 'Inter-entreprises', type: 'boolean' },
+      { id: 'intraCompany', name: 'Intra-entreprise', type: 'boolean' },
+      { id: 'remote', name: 'Formation à distance', type: 'boolean' },
+      { id: 'onsite', name: 'Formation sur site', type: 'boolean' }
     ];
-
-    const specificFeatures = {
-      hardware: [
-        { id: 'warranty', name: 'Garantie', type: 'boolean' },
-        { id: 'onsite-support', name: 'Support sur site', type: 'boolean' },
-        { id: 'installation', name: 'Installation incluse', type: 'boolean' },
-        { id: 'maintenance', name: 'Maintenance préventive', type: 'boolean' },
-      ],
-      license: [
-        { id: 'updates', name: 'Mises à jour automatiques', type: 'boolean' },
-        { id: 'api', name: 'API disponible', type: 'boolean' },
-        { id: 'customization', name: 'Personnalisation', type: 'boolean' },
-        { id: 'integration', name: 'Intégrations tierces', type: 'boolean' },
-      ],
-      training: [
-        { id: 'certification', name: 'Certification incluse', type: 'boolean' },
-        { id: 'materials', name: 'Supports de cours', type: 'boolean' },
-        { id: 'practice', name: 'Exercices pratiques', type: 'boolean' },
-        { id: 'mentoring', name: 'Mentorat', type: 'boolean' },
-      ],
-      expert: [
-        { id: 'availability', name: 'Disponibilité 24/7', type: 'boolean' },
-        { id: 'remote', name: 'Travail à distance', type: 'boolean' },
-        { id: 'reporting', name: 'Reporting hebdomadaire', type: 'boolean' },
-        { id: 'sla', name: 'SLA garanti', type: 'boolean' },
-      ],
-    };
-
-    return [...commonFeatures, ...specificFeatures[type]];
   };
 
   return (
     <div className="min-h-screen bg-[#EDEDED]">
-      <div className="max-w-[1600px] mx-auto px-8 py-12">
-        <h1 className="text-3xl font-bold text-[#0B3251] mb-8">Comparer les solutions</h1>
-
-        {/* Filtres de catégories */}
-        <div className="flex gap-4 mb-8">
-          {(['hardware', 'license', 'training', 'expert'] as ProductType[]).map((type) => (
-            <button
-              key={type}
-              onClick={() => {
-                setSelectedType(type);
-                setSelectedProducts([]);
-              }}
-              className={`px-6 py-3 rounded-md font-medium ${
-                selectedType === type
-                  ? 'bg-primary text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {type === 'hardware' && 'Hardwares'}
-              {type === 'license' && 'Licences'}
-              {type === 'training' && 'Formations'}
-              {type === 'expert' && 'Experts as a Service'}
-            </button>
-          ))}
+      {/* Header */}
+      <div className="bg-primary text-white py-16">
+        <div className="max-w-[1600px] mx-auto px-8">
+          <div className="flex items-center justify-between mb-6">
+            <Link to="/catalog" className="flex items-center text-gray-300 hover:text-white">
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              <span>Retour au catalogue</span>
+            </Link>
+          </div>
+          <div className="max-w-3xl">
+            <h1 className="text-4xl font-bold mb-4">
+              Comparez nos formations en IA générative
+            </h1>
+            <p className="text-gray-300 text-lg">
+              Analysez en détail nos différentes formations pour trouver celle qui correspond le mieux à vos objectifs d'apprentissage et votre niveau.
+            </p>
+          </div>
         </div>
-        
+      </div>
+
+      <div className="max-w-[1600px] mx-auto px-8 py-12">
         <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
-          <table className="w-full" id="comparison-table">
+          <table className="w-full">
             <thead>
               <tr>
                 <th className="p-6 min-w-[200px] text-left bg-gray-50 border-b border-gray-200 sticky left-0 z-10">
@@ -150,9 +110,9 @@ export default function CompareProducts() {
                       <p className="text-sm text-gray-500">{product.price}</p>
                       <button
                         onClick={() => handleAddToCart(product)}
-                        className="mt-4 w-full bg-primary text-white px-4 py-2 rounded-md text-sm hover:bg-primary/90"
+                        className="mt-4 w-full bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
                       >
-                        Ajouter au panier
+                        Réserver
                       </button>
                     </div>
                   </th>
@@ -167,7 +127,7 @@ export default function CompareProducts() {
                         <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors">
                           <Plus className="w-6 h-6" strokeWidth={2.5} />
                         </div>
-                        <span className="font-medium">Ajouter un produit</span>
+                        <span className="font-medium">Ajouter une formation</span>
                         <span className="text-sm text-primary/70 mt-1">
                           {10 - selectedProducts.length} emplacements disponibles
                         </span>
@@ -212,23 +172,23 @@ export default function CompareProducts() {
               </tr>
             </thead>
             <tbody>
-              {getFeaturesByType(selectedType).map((feature) => (
+              {getFeaturesToCompare().map((feature) => (
                 <tr key={feature.id}>
                   <td className="p-4 border-b border-gray-200 bg-gray-50 sticky left-0">
                     <span className="text-sm font-medium text-gray-700">{feature.name}</span>
                   </td>
                   {selectedProducts.map((product) => (
                     <td key={`${product.uniqueId}-${feature.id}`} className="p-4 border-b border-gray-200 text-center">
-                      {feature.type === 'text' ? (
-                        <span className="text-sm text-gray-600">
-                          {feature.id === 'type' ? product.type : product.description}
-                        </span>
-                      ) : (
+                      {feature.type === 'boolean' ? (
                         Math.random() > 0.5 ? (
                           <Check className="w-5 h-5 text-green-500 mx-auto" />
                         ) : (
                           <X className="w-5 h-5 text-red-500 mx-auto" />
                         )
+                      ) : (
+                        <span className="text-sm text-gray-600">
+                          {product[feature.id] || '-'}
+                        </span>
                       )}
                     </td>
                   ))}

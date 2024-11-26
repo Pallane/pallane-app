@@ -24,94 +24,57 @@ interface QuoteRequestData {
   companyName: string;
   phone: string;
   message: string;
-  products: Array<{
+  items: Array<{
     id: string;
     name: string;
     quantity: number;
     type: string;
+    price: string;
   }>;
 }
 
 export const createQuoteRequest = async (quoteData: QuoteRequestData) => {
   try {
-    const { data: quote, error } = await supabase
-      .from('quote_requests')
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      throw new Error('User must be authenticated');
+    }
+
+    // Calculer le montant total
+    const totalAmount = quoteData.items.reduce((total, item) => {
+      const price = parseFloat(item.price.replace(/[^0-9.-]+/g, ""));
+      return total + (price * item.quantity);
+    }, 0);
+
+    // Définir la date de validité (par exemple, 30 jours)
+    const validUntil = new Date();
+    validUntil.setDate(validUntil.getDate() + 30);
+
+    const { data, error } = await supabase
+      .from('quotes')
       .insert([
         {
+          user_id: session.user.id,
           first_name: quoteData.firstName,
           last_name: quoteData.lastName,
           email: quoteData.email,
           company_name: quoteData.companyName,
           phone: quoteData.phone,
           message: quoteData.message,
-          products: quoteData.products,
-          status: 'pending'
+          items: quoteData.items,
+          status: 'pending',
+          total_amount: totalAmount,
+          valid_until: validUntil.toISOString()
         }
       ])
       .select()
       .single();
 
     if (error) throw error;
-    return quote;
+    return data;
   } catch (error) {
     console.error('Error creating quote request:', error);
-    throw error;
-  }
-};
-
-export const getProfile = async () => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.user) throw new Error('No user logged in');
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error fetching profile:', error);
-    throw error;
-  }
-};
-
-export const updateProfile = async (updates: Partial<Database['public']['Tables']['profiles']['Update']>) => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session?.user) throw new Error('No user logged in');
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', session.user.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    throw error;
-  }
-};
-
-export const getProducts = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error fetching products:', error);
     throw error;
   }
 };
@@ -123,15 +86,14 @@ export const getQuoteRequests = async () => {
     if (!session?.user) throw new Error('No user logged in');
 
     const { data, error } = await supabase
-      .from('quote_requests')
+      .from('quotes')
       .select('*')
-      .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error fetching quote requests:', error);
+    console.error('Error fetching quotes:', error);
     throw error;
   }
 };
