@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -15,3 +16,14 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+=======
+# Mettre à jour main.tsx pour ajouter AuthProvider
+import { AuthProvider } from './contexts/AuthContext';
+
+// Wrapper l'App avec AuthProvider
+<React.StrictMode>
+  <AuthProvider>
+    <App />
+  </AuthProvider>
+</React.StrictMode>
+>>>>>>> a1dc676e227769169dc61701bae80052d62f2c0a
